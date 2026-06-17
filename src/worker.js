@@ -1,7 +1,7 @@
 import arcaSubjects from "../fixtures/arca_subjects.json" with { type: "json" };
 import bcraFixtures from "../fixtures/bcra_debtors.json" with { type: "json" };
 
-const APP_VERSION = "0.5.0-worker";
+const APP_VERSION = "0.5.1-worker";
 const BCRA_SITUATION_LABELS = {
   1: "normal",
   2: "low_risk",
@@ -183,7 +183,9 @@ async function getBcraSituation(taxId, env, ctx) {
           "User-Agent": "NosisLiteMvp/0.5-worker",
         },
       });
-      if (response.status === 404) return fallbackOrNone(taxId, mode, `BCRA live returned 404 for ${taxId}`);
+      if (response.status === 404) {
+        return fallbackOrNone(taxId, mode, `BCRA live returned 404 for ${taxId}`, "not_found");
+      }
       if (!response.ok) throw new Error(`BCRA live HTTP ${response.status}`);
       const payload = await response.json();
       const normalized = normalizeBcraResponse(payload);
@@ -192,18 +194,21 @@ async function getBcraSituation(taxId, env, ctx) {
       return [normalized, sourceTrace("bcra", "ok", "live", `Fetched from ${liveUrl} on attempt ${attempt}`)];
     } catch (error) {
       lastError = `BCRA live unavailable: ${error.message}`;
-      if (attempt < maxRetries) await sleep(backoffSeconds * attempt * 1000);
+      if (attempt < maxRetries) {
+        const jitterMs = Math.floor(Math.random() * 500);
+        await sleep(backoffSeconds * attempt * 1000 + jitterMs);
+      }
     }
   }
-  return fallbackOrNone(taxId, mode, lastError);
+  return fallbackOrNone(taxId, mode, lastError, "error");
 }
 
-function fallbackOrNone(taxId, mode, message) {
+function fallbackOrNone(taxId, mode, message, missingStatus) {
   if (mode === "auto") {
     const fixture = bcraFixtures[taxId] || null;
-    return [fixture, sourceTrace("bcra", fixture ? "fallback" : "not_found", "fixture", message)];
+    return [fixture, sourceTrace("bcra", fixture ? "fallback" : missingStatus, fixture ? "fixture" : "live", message)];
   }
-  return [null, sourceTrace("bcra", "not_found", "live", message)];
+  return [null, sourceTrace("bcra", missingStatus, "live", message)];
 }
 
 function normalizeBcraResponse(payload) {

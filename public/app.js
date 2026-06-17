@@ -32,6 +32,7 @@ function render(data) {
   const bcra = checks.bcra_debtors;
   const arca = checks.arca_registration;
   const bcraSource = data.sources.find((source) => source.name === "bcra");
+  const bcraUnavailable = bcraSource?.status === "error";
   const activityItems = subject.activities
     .map((item) => `<li><strong>${escapeHtml(item.code)}</strong> ${escapeHtml(item.description)}</li>`)
     .join("");
@@ -57,8 +58,8 @@ function render(data) {
       </article>
       <article class="card metric">
         <div class="label">BCRA</div>
-        <div class="value ${riskClass(bcra.worst_situation_label)}">${escapeHtml(bcra.worst_situation_label || "No record")}</div>
-        <div>${bcra.has_rejected_checks ? "Has rejected checks" : "No rejected checks"} · ${escapeHtml(bcraSource?.mode || "unknown")}</div>
+        <div class="value ${bcraUnavailable ? "danger" : riskClass(bcra.worst_situation_label)}">${escapeHtml(bcraUnavailable ? "Unavailable" : (bcra.worst_situation_label || "No record"))}</div>
+        <div>${bcraUnavailable ? "Retry later" : (bcra.has_rejected_checks ? "Has rejected checks" : "No rejected checks")} · ${escapeHtml(bcraSource?.mode || "unknown")}</div>
       </article>
     </div>
 
@@ -101,11 +102,12 @@ function renderBulk(data) {
     .map((item) => {
       const bcra = item.checks.bcra_debtors;
       const source = item.sources.find((entry) => entry.name === "bcra");
+      const unavailable = source?.status === "error";
       return `
         <tr>
           <td>${escapeHtml(item.subject.formatted_tax_id)}</td>
           <td>${escapeHtml(item.subject.name || "Not found")}</td>
-          <td class="${riskClass(bcra.worst_situation_label)}">${escapeHtml(bcra.worst_situation_label || "No record")}</td>
+          <td class="${unavailable ? "danger" : riskClass(bcra.worst_situation_label)}">${escapeHtml(unavailable ? "Unavailable" : (bcra.worst_situation_label || "No record"))}</td>
           <td>${escapeHtml(source?.mode || "unknown")}</td>
           <td>${escapeHtml(source?.message || "OK")}</td>
         </tr>
