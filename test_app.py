@@ -32,6 +32,7 @@ class CheckServiceTests(unittest.TestCase):
         self.assertEqual(result["subject"]["registration_status"], "active")
         self.assertEqual(result["risk"]["bcra_worst_situation"], 1)
         self.assertEqual(result["risk"]["bcra_worst_situation_label"], "normal")
+        self.assertEqual(result["risk"]["bcra_worst_situation_description"], "Normal")
         self.assertEqual(result["checks"]["format"]["formatted_tax_id"], "30-70767203-6")
         self.assertEqual(result["checks"]["arca_registration"]["activity_count"], 2)
         self.assertEqual(result["checks"]["bcra_debtors"]["debt_amount_ars"], 1250000)

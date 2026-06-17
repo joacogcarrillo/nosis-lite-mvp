@@ -35,6 +35,14 @@ BCRA_SITUATION_LABELS = {
     5: "irrecoverable",
     6: "irrecoverable_technical",
 }
+BCRA_SITUATION_DESCRIPTIONS = {
+    1: "Normal",
+    2: "Riesgo bajo",
+    3: "Riesgo medio",
+    4: "Riesgo alto",
+    5: "Irrecuperable",
+    6: "Irrecuperable por disposición técnica",
+}
 
 
 def utc_now() -> str:
@@ -370,6 +378,7 @@ class CheckService:
                 "has_bcra_debt": False,
                 "bcra_worst_situation": None,
                 "bcra_worst_situation_label": None,
+                "bcra_worst_situation_description": None,
                 "reporting_entities": 0,
                 "has_rejected_checks": False,
                 "rejected_checks_count": 0,
@@ -385,6 +394,7 @@ class CheckService:
             "has_bcra_debt": bool(bcra.get("debts")),
             "bcra_worst_situation": worst,
             "bcra_worst_situation_label": BCRA_SITUATION_LABELS.get(worst),
+            "bcra_worst_situation_description": BCRA_SITUATION_DESCRIPTIONS.get(worst),
             "reporting_entities": len(bcra.get("debts", [])),
             "has_rejected_checks": bool(rejected_checks),
             "rejected_checks_count": sum(item.get("count", 0) for item in rejected_checks),
@@ -420,6 +430,7 @@ class CheckService:
                 "has_debt": risk["has_bcra_debt"],
                 "worst_situation": risk["bcra_worst_situation"],
                 "worst_situation_label": risk["bcra_worst_situation_label"],
+                "worst_situation_description": risk["bcra_worst_situation_description"],
                 "reporting_entities": risk["reporting_entities"],
                 "debt_amount_ars": risk["debt_amount_ars"],
                 "has_rejected_checks": risk["has_rejected_checks"],

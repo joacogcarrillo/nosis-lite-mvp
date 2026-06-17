@@ -1,7 +1,7 @@
 import arcaSubjects from "../fixtures/arca_subjects.json" with { type: "json" };
 import bcraFixtures from "../fixtures/bcra_debtors.json" with { type: "json" };
 
-const APP_VERSION = "0.5.1-worker";
+const APP_VERSION = "0.5.2-worker";
 const BCRA_SITUATION_LABELS = {
   1: "normal",
   2: "low_risk",
@@ -9,6 +9,14 @@ const BCRA_SITUATION_LABELS = {
   4: "high_risk",
   5: "irrecoverable",
   6: "irrecoverable_technical",
+};
+const BCRA_SITUATION_DESCRIPTIONS = {
+  1: "Normal",
+  2: "Riesgo bajo",
+  3: "Riesgo medio",
+  4: "Riesgo alto",
+  5: "Irrecuperable",
+  6: "Irrecuperable por disposición técnica",
 };
 
 export default {
@@ -250,6 +258,7 @@ function buildRisk(bcra) {
       has_bcra_debt: false,
       bcra_worst_situation: null,
       bcra_worst_situation_label: null,
+      bcra_worst_situation_description: null,
       reporting_entities: 0,
       has_rejected_checks: false,
       rejected_checks_count: 0,
@@ -266,6 +275,7 @@ function buildRisk(bcra) {
     has_bcra_debt: Boolean((bcra.debts || []).length),
     bcra_worst_situation: worst,
     bcra_worst_situation_label: BCRA_SITUATION_LABELS[worst] || null,
+    bcra_worst_situation_description: BCRA_SITUATION_DESCRIPTIONS[worst] || null,
     reporting_entities: (bcra.debts || []).length,
     has_rejected_checks: Boolean(rejectedChecks.length),
     rejected_checks_count: rejectedChecks.reduce((sum, item) => sum + (item.count || 0), 0),
@@ -296,6 +306,7 @@ function buildEasyChecks(taxId, subject, risk, sources) {
       has_debt: risk.has_bcra_debt,
       worst_situation: risk.bcra_worst_situation,
       worst_situation_label: risk.bcra_worst_situation_label,
+      worst_situation_description: risk.bcra_worst_situation_description,
       reporting_entities: risk.reporting_entities,
       debt_amount_ars: risk.debt_amount_ars,
       has_rejected_checks: risk.has_rejected_checks,

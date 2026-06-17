@@ -26,6 +26,12 @@ function riskClass(label) {
   return "danger";
 }
 
+function situationDisplay(bcra) {
+  if (bcra.worst_situation == null) return "No record";
+  const description = bcra.worst_situation_description || bcra.worst_situation_label || "Unknown";
+  return `Situación ${bcra.worst_situation} - ${description}`;
+}
+
 function render(data) {
   const checks = data.checks;
   const subject = data.subject;
@@ -58,7 +64,7 @@ function render(data) {
       </article>
       <article class="card metric">
         <div class="label">BCRA</div>
-        <div class="value ${bcraUnavailable ? "danger" : riskClass(bcra.worst_situation_label)}">${escapeHtml(bcraUnavailable ? "Unavailable" : (bcra.worst_situation_label || "No record"))}</div>
+        <div class="value ${bcraUnavailable ? "danger" : riskClass(bcra.worst_situation_label)}">${escapeHtml(bcraUnavailable ? "Unavailable" : situationDisplay(bcra))}</div>
         <div>${bcraUnavailable ? "Retry later" : (bcra.has_rejected_checks ? "Has rejected checks" : "No rejected checks")} · ${escapeHtml(bcraSource?.mode || "unknown")}</div>
       </article>
     </div>
@@ -75,7 +81,7 @@ function render(data) {
       <article class="card">
         <h2>Credit situation</h2>
         <dl>
-          <dt>Worst situation</dt><dd>${escapeHtml(bcra.worst_situation ?? "None")}</dd>
+          <dt>BCRA situation</dt><dd>${escapeHtml(bcraUnavailable ? "Unavailable" : situationDisplay(bcra))}</dd>
           <dt>Debt total</dt><dd>${money.format(bcra.debt_amount_ars)}</dd>
           <dt>Rejected checks</dt><dd>${bcra.rejected_checks_count} / ${money.format(bcra.rejected_checks_amount_ars)}</dd>
         </dl>
@@ -107,7 +113,7 @@ function renderBulk(data) {
         <tr>
           <td>${escapeHtml(item.subject.formatted_tax_id)}</td>
           <td>${escapeHtml(item.subject.name || "Not found")}</td>
-          <td class="${unavailable ? "danger" : riskClass(bcra.worst_situation_label)}">${escapeHtml(unavailable ? "Unavailable" : (bcra.worst_situation_label || "No record"))}</td>
+          <td class="${unavailable ? "danger" : riskClass(bcra.worst_situation_label)}">${escapeHtml(unavailable ? "Unavailable" : situationDisplay(bcra))}</td>
           <td>${escapeHtml(source?.mode || "unknown")}</td>
           <td>${escapeHtml(source?.message || "OK")}</td>
         </tr>
