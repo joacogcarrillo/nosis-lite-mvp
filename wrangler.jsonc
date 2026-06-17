@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nosis-lite-mvp",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-06-17",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "BCRA_MODE": "auto",
+    "BCRA_API_BASE_URL": "https://api.bcra.gob.ar/centraldedeudores/v1.0",
+    "BCRA_MAX_RETRIES": "3",
+    "BCRA_BACKOFF_SECONDS": "1",
+    "BCRA_CACHE_TTL_SECONDS": "86400",
+    "BULK_MAX_IDS": "500"
+  }
+}

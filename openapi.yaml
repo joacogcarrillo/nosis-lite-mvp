@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Nosis Lite MVP API
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      responses:
+        "200":
+          description: Service status
+  /version:
+    get:
+      responses:
+        "200":
+          description: Service version
+  /v1/subjects/{tax_id}:
+    get:
+      parameters:
+        - name: tax_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 30-70767203-6
+      responses:
+        "200":
+          description: Consolidated subject profile
+        "400":
+          description: Invalid CUIT/CUIL/CDI
+  /v1/checks:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tax_id]
+              properties:
+                tax_id:
+                  type: string
+                  example: 30-70767203-6
+                checks:
+                  type: array
+                  items:
+                    type: string
+                    enum: [format, arca_registration, bcra_debtors, source_freshness]
+      responses:
+        "201":
+          description: Completed check
+        "400":
+          description: Invalid request

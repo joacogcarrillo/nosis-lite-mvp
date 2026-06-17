@@ -1,0 +1,28 @@
+{
+  "30707672036": {
+    "name": "ACME SERVICIOS S.A.",
+    "registration_status": "active",
+    "tax_tags": ["IVA Responsable Inscripto", "Ganancias Sociedades"],
+    "activities": [
+      {
+        "code": "620100",
+        "description": "Servicios de consultores en informática y suministros de programas de informática"
+      },
+      {
+        "code": "631110",
+        "description": "Procesamiento de datos"
+      }
+    ]
+  },
+  "20304050609": {
+    "name": "JUAN PEREZ",
+    "registration_status": "active",
+    "tax_tags": ["Monotributo"],
+    "activities": [
+      {
+        "code": "702091",
+        "description": "Servicios de asesoramiento, dirección y gestión empresarial"
+      }
+    ]
+  }
+}

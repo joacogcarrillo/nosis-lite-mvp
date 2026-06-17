@@ -1,0 +1,7 @@
+__pycache__/
+node_modules/
+*.pyc
+data/
+server.out.log
+server.err.log
+.env

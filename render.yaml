@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: nosis-lite-mvp
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: BCRA_MODE
+        value: auto
+      - key: BCRA_MAX_RETRIES
+        value: "3"
+      - key: BCRA_BACKOFF_SECONDS
+        value: "1.0"
+      - key: BCRA_MIN_INTERVAL_SECONDS
+        value: "1.0"
+      - key: BCRA_CACHE_TTL_SECONDS
+        value: "86400"
+      - key: BULK_MAX_IDS
+        value: "500"
+    healthCheckPath: /health

@@ -1,0 +1,28 @@
+app = "nosis-lite-mvp"
+primary_region = "mia"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  BCRA_MODE = "auto"
+  BCRA_MAX_RETRIES = "3"
+  BCRA_BACKOFF_SECONDS = "1.0"
+  BCRA_MIN_INTERVAL_SECONDS = "1.0"
+  BCRA_CACHE_TTL_SECONDS = "86400"
+  BULK_MAX_IDS = "500"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

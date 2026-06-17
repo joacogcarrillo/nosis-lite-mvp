@@ -1,0 +1,32 @@
+{
+  "30707672036": {
+    "summary": "Situación normal en entidades informantes de fixture.",
+    "debts": [
+      {
+        "entity": "BANCO DEMO S.A.",
+        "period": "2026-04",
+        "situation": 1,
+        "amount_ars": 1250000
+      }
+    ],
+    "rejected_checks": []
+  },
+  "20304050609": {
+    "summary": "Registra deuda vencida en fixture.",
+    "debts": [
+      {
+        "entity": "FINANCIERA DEMO S.A.",
+        "period": "2026-04",
+        "situation": 3,
+        "amount_ars": 240000
+      }
+    ],
+    "rejected_checks": [
+      {
+        "period": "2026-03",
+        "count": 1,
+        "amount_ars": 80000
+      }
+    ]
+  }
+}

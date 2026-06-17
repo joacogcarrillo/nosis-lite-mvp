@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nosis Lite</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="lookup">
+        <div>
+          <p class="eyebrow">Nosis Lite MVP</p>
+          <h1>CUIT/CUIL check</h1>
+        </div>
+
+        <form id="lookup-form" class="search">
+          <label for="tax-id">CUIT or CUIL</label>
+          <div class="search-row">
+            <input id="tax-id" name="tax-id" value="30-70767203-6" autocomplete="off">
+            <button type="submit">Check</button>
+          </div>
+          <div class="examples">
+            <button type="button" data-tax-id="30-70767203-6">Company demo</button>
+            <button type="button" data-tax-id="20-30405060-9">Risk demo</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="bulk card">
+        <h2>Bulk check</h2>
+        <label for="bulk-tax-ids">One CUIT/CUIL per line</label>
+        <textarea id="bulk-tax-ids">30-70767203-6
+20-30405060-9
+30-50001091-2</textarea>
+        <button id="bulk-check" type="button">Run bulk check</button>
+      </section>
+
+      <section id="status" class="status">Ready</section>
+      <section id="result" class="result" aria-live="polite"></section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
