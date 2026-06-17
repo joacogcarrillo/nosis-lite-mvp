@@ -1,7 +1,7 @@
 import arcaSubjects from "../fixtures/arca_subjects.json" with { type: "json" };
 import bcraFixtures from "../fixtures/bcra_debtors.json" with { type: "json" };
 
-const APP_VERSION = "0.6.0-worker";
+const APP_VERSION = "0.7.0-worker";
 const BCRA_SITUATION_LABELS = {
   1: "normal",
   2: "low_risk",
@@ -103,6 +103,13 @@ function inferSubjectKind(taxId) {
   return "unknown";
 }
 
+export function inferTaxIdType(taxId) {
+  const prefix = normalizeTaxId(taxId).slice(0, 2);
+  if (["20", "23", "24", "27"].includes(prefix)) return "CUIL";
+  if (["30", "33", "34"].includes(prefix)) return "CUIT";
+  return "unknown";
+}
+
 async function buildSubject(rawTaxId, env, ctx) {
   const taxId = normalizeTaxId(rawTaxId);
   const valid = isValidCuit(taxId);
@@ -145,9 +152,16 @@ async function createBulkCheck(payload, env, ctx) {
 
   const results = [];
   const errors = [];
+  const occurrences = new Map();
   for (const rawTaxId of cleaned) {
     try {
-      results.push(await buildSubject(rawTaxId, env, ctx));
+      const normalized = normalizeTaxId(rawTaxId);
+      const occurrence = (occurrences.get(normalized) || 0) + 1;
+      occurrences.set(normalized, occurrence);
+      const result = await buildSubject(normalized, env, ctx);
+      result.checks.local_integrity.duplicate_in_request = occurrence > 1;
+      result.checks.local_integrity.request_occurrence = occurrence;
+      results.push(result);
     } catch (error) {
       errors.push({ tax_id: rawTaxId, error: error.message });
     }
@@ -177,7 +191,8 @@ async function getBcraSituation(taxId, env, ctx) {
   const cacheRequest = new Request(`https://nosis-lite-cache.local/bcra/${taxId}`);
   const cached = await cache.match(cacheRequest);
   if (cached) {
-    return [await cached.json(), sourceTrace("bcra", "cache", "cache", "Cloudflare cache hit")];
+    const cachedPayload = await cached.json();
+    return [cachedPayload, sourceTrace("bcra", "cache", "cache", "Cloudflare cache hit", cachedPayload.source_fetched_at)];
   }
 
   const maxRetries = Number(env.BCRA_MAX_RETRIES || 3);
@@ -196,7 +211,9 @@ async function getBcraSituation(taxId, env, ctx) {
       }
       if (!response.ok) throw new Error(`BCRA live HTTP ${response.status}`);
       const payload = await response.json();
-      const normalized = normalizeBcraResponse(payload);
+      const checksPayload = await fetchRejectedChecks(baseUrl, taxId);
+      const normalized = normalizeBcraResponse(payload, checksPayload);
+      normalized.source_fetched_at = utcNow();
       const ttl = Number(env.BCRA_CACHE_TTL_SECONDS || 86400);
       ctx.waitUntil(cache.put(cacheRequest, json(normalized, 200, { "Cache-Control": `max-age=${ttl}` })));
       return [normalized, sourceTrace("bcra", "ok", "live", `Fetched from ${liveUrl} on attempt ${attempt}`)];
@@ -211,6 +228,19 @@ async function getBcraSituation(taxId, env, ctx) {
   return fallbackOrNone(taxId, mode, lastError, "error");
 }
 
+async function fetchRejectedChecks(baseUrl, taxId) {
+  try {
+    const response = await fetch(`${baseUrl}/ChequesRechazados/${taxId}`, {
+      headers: { Accept: "application/json", "User-Agent": "NosisLiteMvp/0.7-worker" },
+    });
+    if (response.status === 404) return { status: "not_found", payload: null };
+    if (!response.ok) return { status: "unavailable", payload: null, message: `HTTP ${response.status}` };
+    return { status: "ok", payload: await response.json() };
+  } catch (error) {
+    return { status: "unavailable", payload: null, message: error.message };
+  }
+}
+
 function fallbackOrNone(taxId, mode, message, missingStatus) {
   if (mode === "auto") {
     const fixture = bcraFixtures[taxId] || null;
@@ -219,8 +249,10 @@ function fallbackOrNone(taxId, mode, message, missingStatus) {
   return [null, sourceTrace("bcra", missingStatus, "live", message)];
 }
 
-function normalizeBcraResponse(payload) {
+export function normalizeBcraResponse(payload, checksPayload = null) {
   const result = payload.results || {};
+  const checksResponse = checksPayload && Object.hasOwn(checksPayload, "status")
+    ? checksPayload : { status: checksPayload ? "ok" : "not_found", payload: checksPayload };
   const periods = result.periodos || [];
   const debts = [];
   for (const period of periods) {
@@ -238,18 +270,42 @@ function normalizeBcraResponse(payload) {
     }
   }
 
-  const checks = result.chequesRechazados || result.cheques_rechazados || [];
+  const checks = normalizeRejectedChecks(checksResponse.payload?.results
+    || result.chequesRechazados || result.cheques_rechazados || []);
   return {
     summary: `BCRA live record for ${result.denominacion || result.identificacion}.`,
     denomination: result.denominacion,
     debts,
-    rejected_checks: checks.map((check) => ({
-      period: check.periodo,
-      count: check.cantidad || check.count || 1,
-      amount_ars: check.monto || 0,
-    })),
+    rejected_checks: checks,
+    rejected_checks_status: checksResponse.status,
+    rejected_checks_message: checksResponse.message || null,
     raw_period_count: periods.length,
   };
+}
+
+function normalizeRejectedChecks(value, context = {}) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => normalizeRejectedChecks(item, context));
+  if (typeof value !== "object") return [];
+
+  const next = {
+    reason: value.causal || value.detalle || context.reason || null,
+    entity: value.entidad || value.denominacionEntidad || context.entity || null,
+  };
+  const nestedKeys = ["causales", "entidades", "rechazados", "cheques", "chequesRechazados", "cheques_rechazados"];
+  const nested = nestedKeys.flatMap((key) => normalizeRejectedChecks(value[key], next));
+  const isCheck = value.fechaRechazo || value.periodo || value.nroCheque || value.numeroCheque
+    || value.monto != null || value.importe != null || value.cantidad != null || value.count != null;
+  if (!isCheck) return nested;
+  return [{
+    period: value.periodo || value.fechaRechazo || null,
+    entity: next.entity,
+    reason: next.reason,
+    count: value.cantidad || value.count || 1,
+    amount_ars: value.monto || value.importe || 0,
+    check_number: value.nroCheque || value.numeroCheque || null,
+    paid_at: value.fechaPago || null,
+  }, ...nested];
 }
 
 function buildRisk(bcra) {
@@ -268,19 +324,44 @@ function buildRisk(bcra) {
     };
   }
 
-  const situations = (bcra.debts || []).map((item) => item.situation || 0);
-  const worst = situations.length ? Math.max(...situations) : null;
+  const debts = bcra.debts || [];
+  const situations = debts.map((item) => item.situation || 0);
+  const historicalWorst = situations.length ? Math.max(...situations) : null;
   const rejectedChecks = bcra.rejected_checks || [];
+  const entities = [...new Set(debts.map((item) => item.entity).filter(Boolean))].sort();
+  const periods = [...new Set(debts.map((item) => item.period).filter(Boolean))]
+    .sort((a, b) => String(b).replace(/\D/g, "").localeCompare(String(a).replace(/\D/g, "")));
+  const latestPeriod = periods[0] || null;
+  const latestDebts = latestPeriod ? debts.filter((item) => item.period === latestPeriod) : debts;
+  const worst = latestDebts.length ? Math.max(...latestDebts.map((item) => item.situation || 0)) : null;
+  const history = periods.map((period) => {
+    const rows = debts.filter((item) => item.period === period);
+    return {
+      period,
+      entity_count: new Set(rows.map((item) => item.entity).filter(Boolean)).size,
+      debt_amount_ars: rows.reduce((sum, item) => sum + (item.amount_ars || 0), 0),
+      worst_situation: rows.length ? Math.max(...rows.map((item) => item.situation || 0)) : null,
+    };
+  });
   return {
     has_bcra_debt: Boolean((bcra.debts || []).length),
     bcra_worst_situation: worst,
     bcra_worst_situation_label: BCRA_SITUATION_LABELS[worst] || null,
     bcra_worst_situation_description: BCRA_SITUATION_DESCRIPTIONS[worst] || null,
-    reporting_entities: (bcra.debts || []).length,
+    bcra_historical_worst_situation: historicalWorst,
+    reporting_entities: entities.length,
     has_rejected_checks: Boolean(rejectedChecks.length),
     rejected_checks_count: rejectedChecks.reduce((sum, item) => sum + (item.count || 0), 0),
     rejected_checks_amount_ars: rejectedChecks.reduce((sum, item) => sum + (item.amount_ars || 0), 0),
-    debt_amount_ars: (bcra.debts || []).reduce((sum, item) => sum + (item.amount_ars || 0), 0),
+    debt_amount_ars: latestDebts.reduce((sum, item) => sum + (item.amount_ars || 0), 0),
+    latest_period: latestPeriod,
+    period_count: periods.length,
+    history,
+    entities,
+    entity_details: debts,
+    rejected_checks: rejectedChecks,
+    rejected_checks_status: bcra.rejected_checks_status || "fixture",
+    rejected_checks_message: bcra.rejected_checks_message || null,
     summary: bcra.summary,
   };
 }
@@ -307,11 +388,28 @@ function buildEasyChecks(taxId, subject, risk, sources) {
       worst_situation: risk.bcra_worst_situation,
       worst_situation_label: risk.bcra_worst_situation_label,
       worst_situation_description: risk.bcra_worst_situation_description,
+      historical_worst_situation: risk.bcra_historical_worst_situation || null,
       reporting_entities: risk.reporting_entities,
       debt_amount_ars: risk.debt_amount_ars,
       has_rejected_checks: risk.has_rejected_checks,
       rejected_checks_count: risk.rejected_checks_count,
       rejected_checks_amount_ars: risk.rejected_checks_amount_ars,
+      latest_period: risk.latest_period || null,
+      period_count: risk.period_count || 0,
+      history: risk.history || [],
+      entities: risk.entities || [],
+      entity_details: risk.entity_details || [],
+      rejected_checks: risk.rejected_checks || [],
+      rejected_checks_status: risk.rejected_checks_status || "unknown",
+      rejected_checks_message: risk.rejected_checks_message || null,
+    },
+    local_integrity: {
+      tax_id_type: inferTaxIdType(taxId),
+      recognized_prefix: inferTaxIdType(taxId) !== "unknown",
+      is_valid_checksum: isValidCuit(taxId),
+      duplicate_in_request: false,
+      request_occurrence: 1,
+      has_period_changes: new Set((risk.history || []).map((item) => `${item.debt_amount_ars}:${item.worst_situation}`)).size > 1,
     },
     source_freshness: {
       source_count: sources.length,
@@ -319,12 +417,27 @@ function buildEasyChecks(taxId, subject, risk, sources) {
       not_found_sources: sources.filter((source) => source.status === "not_found").map((source) => source.name),
       fetched_at: sources.map((source) => source.fetched_at).sort().at(-1),
       mode: [...new Set(sources.map((source) => source.mode))].sort().join(", "),
+      sources: sources.map((source) => ({
+        name: source.name,
+        status: source.status,
+        fetched_at: source.fetched_at,
+        mode: source.mode,
+        is_stale: source.status === "stale_cache",
+        age_seconds: sourceAgeSeconds(source.fetched_at),
+      })),
+      has_stale_sources: sources.some((source) => source.status === "stale_cache"),
+      oldest_source_age_seconds: Math.max(0, ...sources.map((source) => sourceAgeSeconds(source.fetched_at))),
     },
   };
 }
 
-function sourceTrace(name, status, mode, message = null) {
-  return { name, status, fetched_at: utcNow(), mode, message };
+function sourceTrace(name, status, mode, message = null, fetchedAt = null) {
+  return { name, status, fetched_at: fetchedAt || utcNow(), mode, message };
+}
+
+function sourceAgeSeconds(fetchedAt) {
+  const parsed = Date.parse(fetchedAt);
+  return Number.isFinite(parsed) ? Math.max(0, Math.floor((Date.now() - parsed) / 1000)) : null;
 }
 
 function json(payload, status = 200, headers = {}) {

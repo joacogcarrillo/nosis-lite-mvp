@@ -44,9 +44,30 @@ paths:
                   type: array
                   items:
                     type: string
-                    enum: [format, arca_registration, bcra_debtors, source_freshness]
+                    enum: [format, local_integrity, arca_registration, bcra_debtors, source_freshness]
       responses:
         "201":
           description: Completed check
+        "400":
+          description: Invalid request
+  /v1/bulk-checks:
+    post:
+      summary: Check multiple CUIT/CUIL identifiers and flag repeated inputs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tax_ids]
+              properties:
+                tax_ids:
+                  oneOf:
+                    - type: array
+                      items: { type: string }
+                    - type: string
+      responses:
+        "201":
+          description: Completed bulk check
         "400":
           description: Invalid request

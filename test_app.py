@@ -50,6 +50,28 @@ class CheckServiceTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["result"]["tax_id"], "30707672036")
 
+    def test_bulk_flags_duplicate_occurrences(self):
+        service = CheckService()
+        result = service.create_bulk_check({"tax_ids": ["30-70767203-6", "30707672036"]})
+        self.assertFalse(result["results"][0]["checks"]["local_integrity"]["duplicate_in_request"])
+        self.assertTrue(result["results"][1]["checks"]["local_integrity"]["duplicate_in_request"])
+        self.assertEqual(result["results"][1]["checks"]["local_integrity"]["request_occurrence"], 2)
+
+    def test_bcra_history_uses_latest_period_for_current_debt(self):
+        risk = CheckService._build_risk({
+            "summary": "test",
+            "debts": [
+                {"entity": "BANCO A", "period": "2026-05", "situation": 1, "amount_ars": 100},
+                {"entity": "BANCO B", "period": "2026-05", "situation": 2, "amount_ars": 200},
+                {"entity": "BANCO A", "period": "2026-04", "situation": 3, "amount_ars": 900},
+            ],
+            "rejected_checks": [],
+        })
+        self.assertEqual(risk["latest_period"], "2026-05")
+        self.assertEqual(risk["period_count"], 2)
+        self.assertEqual(risk["reporting_entities"], 2)
+        self.assertEqual(risk["debt_amount_ars"], 300)
+
 
 if __name__ == "__main__":
     unittest.main()

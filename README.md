@@ -102,8 +102,11 @@ Each subject response includes a `checks` object with:
 
 - `format`: normalized ID, formatted ID, checksum result, expected/actual verifier digit, inferred subject kind
 - `arca_registration`: registration presence, active flag, activity count, main activity, tax tags
-- `bcra_debtors`: debt flag, worst BCRA situation, label, reporting entities, debt total, rejected-check count and amount
-- `source_freshness`: source status summary and fetch timestamp
+- `bcra_debtors`: current debt flag and amount, worst situation, distinct reporting entities, period-by-period history, entity-level rows, and rejected-check details/count/amount
+- `local_integrity`: CUIT/CUIL type, recognized prefix, checksum, duplicate occurrence within a bulk request, and whether BCRA values changed across periods
+- `source_freshness`: per-source status, mode and fetch timestamp, including an explicit stale-source flag
+
+The BCRA debt total represents the latest reported period, while `history` preserves prior periods. This avoids adding several monthly snapshots together and presenting the result as current debt. Rejected-check availability is reported independently through `rejected_checks_status`, so an unavailable checks product does not hide an otherwise valid Central de Deudores result.
 
 ## Live adapters to add next
 
