@@ -228,6 +228,27 @@ Test with:
 
 Success condition: the BCRA card says `live` or `cache`, not `fixture`.
 
+### Automatic deployment from GitHub
+
+The repository includes `.github/workflows/deploy-cloudflare.yml`.
+
+Every push to `main` will:
+
+1. Install dependencies on Node.js 22.
+2. Run the Worker tests.
+3. Deploy with Wrangler when tests pass.
+
+Add these GitHub repository secrets under **Settings > Secrets and variables > Actions**:
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+```
+
+Create the API token in Cloudflare with permission to edit Workers Scripts for the target account. The account ID is available in the Cloudflare dashboard account overview or Workers dashboard.
+
+The workflow also supports manual runs from **GitHub > Actions > Deploy Cloudflare Worker > Run workflow**.
+
 ### Direct deploy from a compatible terminal
 
 Local Wrangler install failed on this Windows ARM environment because the `workerd` package does not support `win32 arm64` here. On a compatible terminal, such as x64 Windows, macOS, Linux, WSL, or Cloudflare's GitHub build, run:
