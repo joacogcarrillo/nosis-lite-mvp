@@ -8,37 +8,77 @@
   </head>
   <body>
     <main class="shell">
-      <section class="lookup">
+      <header class="page-header">
         <div>
           <p class="eyebrow">Nosis Lite MVP</p>
-          <h1>CUIT/CUIL check</h1>
+          <h1>BCRA bulk checks</h1>
+        </div>
+        <button id="download-template" class="secondary" type="button">Download template</button>
+      </header>
+
+      <section class="workspace">
+        <div class="mode-switch" role="tablist" aria-label="Input method">
+          <button id="file-tab" class="mode-button active" role="tab" aria-selected="true" type="button">Upload file</button>
+          <button id="paste-tab" class="mode-button" role="tab" aria-selected="false" type="button">Paste list</button>
         </div>
 
-        <form id="lookup-form" class="search">
-          <label for="tax-id">CUIT or CUIL</label>
-          <div class="search-row">
-            <input id="tax-id" name="tax-id" value="30-70767203-6" autocomplete="off">
-            <button type="submit">Check</button>
-          </div>
-          <div class="examples">
-            <button type="button" data-tax-id="30-70767203-6">Company demo</button>
-            <button type="button" data-tax-id="20-30405060-9">Risk demo</button>
-          </div>
-        </form>
+        <div id="file-panel" class="input-panel" role="tabpanel">
+          <label id="drop-zone" class="drop-zone" for="file-input">
+            <span class="drop-title">Choose an XLSX or CSV file</span>
+            <span id="file-name" class="drop-meta">No file selected</span>
+          </label>
+          <input id="file-input" class="visually-hidden" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        </div>
+
+        <div id="paste-panel" class="input-panel hidden" role="tabpanel">
+          <label for="paste-input">One CUIT/CUIL per line</label>
+          <textarea id="paste-input">30-71513931-2
+20-42459628-1
+20-33597240-7</textarea>
+          <button id="load-paste" class="secondary" type="button">Load list</button>
+        </div>
+
+        <div id="validation" class="validation hidden" aria-live="polite"></div>
+
+        <div class="actions">
+          <button id="run-checks" type="button" disabled>Start checks</button>
+          <span id="status" class="status">Load a file or list</span>
+        </div>
+
+        <div id="progress-wrap" class="progress-wrap hidden">
+          <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+          <span id="progress-label">0 / 0</span>
+        </div>
       </section>
 
-      <section class="bulk card">
-        <h2>Bulk check</h2>
-        <label for="bulk-tax-ids">One CUIT/CUIL per line</label>
-        <textarea id="bulk-tax-ids">30-70767203-6
-20-30405060-9
-30-50001091-2</textarea>
-        <button id="bulk-check" type="button">Run bulk check</button>
+      <section id="results" class="results hidden" aria-live="polite">
+        <div class="results-header">
+          <div>
+            <p class="eyebrow">Completed</p>
+            <h2>Results</h2>
+          </div>
+          <button id="download-results" type="button">Download XLSX</button>
+        </div>
+        <div id="result-summary" class="result-summary"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>CUIT/CUIL</th>
+                <th>Name</th>
+                <th>BCRA situation</th>
+                <th>Amount</th>
+                <th>Source</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody id="result-rows"></tbody>
+          </table>
+        </div>
       </section>
-
-      <section id="status" class="status">Ready</section>
-      <section id="result" class="result" aria-live="polite"></section>
     </main>
+    <script src="/vendor/exceljs.min.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

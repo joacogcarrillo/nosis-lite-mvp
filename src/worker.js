@@ -1,7 +1,7 @@
 import arcaSubjects from "../fixtures/arca_subjects.json" with { type: "json" };
 import bcraFixtures from "../fixtures/bcra_debtors.json" with { type: "json" };
 
-const APP_VERSION = "0.5.2-worker";
+const APP_VERSION = "0.6.0-worker";
 const BCRA_SITUATION_LABELS = {
   1: "normal",
   2: "low_risk",

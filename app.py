@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent
 FIXTURES = ROOT / "fixtures"
 PUBLIC = ROOT / "public"
 DATA = ROOT / "data"
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.6.0"
 BCRA_API_BASE_URL = os.environ.get("BCRA_API_BASE_URL", "https://api.bcra.gob.ar/centraldedeudores/v1.0")
 BCRA_MODE = os.environ.get("BCRA_MODE", "auto").lower()
 BCRA_CACHE_TTL_SECONDS = int(os.environ.get("BCRA_CACHE_TTL_SECONDS", "86400"))
@@ -480,6 +480,10 @@ class ApiHandler(BaseHTTPRequestHandler):
 
         if parsed.path in {"/public/app.js", "/app.js"}:
             self.send_file(PUBLIC / "app.js", "application/javascript; charset=utf-8")
+            return
+
+        if parsed.path == "/vendor/exceljs.min.js":
+            self.send_file(PUBLIC / "vendor" / "exceljs.min.js", "application/javascript; charset=utf-8")
             return
 
         self.send_error_json(404, "not_found", "Endpoint not found")
