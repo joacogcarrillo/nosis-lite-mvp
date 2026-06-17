@@ -151,14 +151,92 @@ Until those credentials exist, keep ARCA in fixture/manual mode and make the UI 
 
 ## Staging deploy
 
-The app is ready for Docker-based staging.
+The app is ready for Docker-based staging and Cloudflare Workers.
 
 Included deploy files:
 
 - `Dockerfile`
+- `wrangler.jsonc`
 - `render.yaml`
 - `railway.json`
 - `fly.toml`
+
+## Cloudflare Worker deploy
+
+Cloudflare Worker files:
+
+- `src/worker.js`
+- `public/index.html`
+- `public/app.css`
+- `public/app.js`
+- `wrangler.jsonc`
+- `package.json`
+
+The Worker exposes the same UI and API paths:
+
+- `/ui`
+- `/health`
+- `/v1/subjects/{tax_id}`
+- `/v1/checks`
+- `/v1/bulk-checks`
+
+### Connect GitHub to Cloudflare
+
+1. Create a GitHub repo named `nosis-lite-mvp`.
+2. Push this local repo to GitHub.
+3. Open Cloudflare Dashboard.
+4. Go to Workers & Pages.
+5. Create an application.
+6. Choose the GitHub repository.
+7. Use these build settings:
+
+```text
+Framework preset: None
+Build command: npm install
+Deploy command: npm run deploy
+Root directory: /
+```
+
+If Cloudflare asks for a Worker config file, use:
+
+```text
+wrangler.jsonc
+```
+
+Set these Worker variables:
+
+```text
+BCRA_MODE=auto
+BCRA_API_BASE_URL=https://api.bcra.gob.ar/centraldedeudores/v1.0
+BCRA_MAX_RETRIES=3
+BCRA_BACKOFF_SECONDS=1
+BCRA_CACHE_TTL_SECONDS=86400
+BULK_MAX_IDS=500
+```
+
+After deploy, open:
+
+```text
+https://nosis-lite-mvp.YOUR-SUBDOMAIN.workers.dev/ui
+```
+
+Test with:
+
+```text
+30-50001091-2
+```
+
+Success condition: the BCRA card says `live` or `cache`, not `fixture`.
+
+### Direct deploy from a compatible terminal
+
+Local Wrangler install failed on this Windows ARM environment because the `workerd` package does not support `win32 arm64` here. On a compatible terminal, such as x64 Windows, macOS, Linux, WSL, or Cloudflare's GitHub build, run:
+
+```bash
+npm install
+npx wrangler login
+npm run deploy
+```
 
 ### Fastest path: Render
 
